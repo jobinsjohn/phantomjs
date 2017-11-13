@@ -28,20 +28,27 @@
 */
 #include "consts.h"
 #include "utils.h"
-#include "env.h"
 #include "phantom.h"
 #include "crashdump.h"
 
 #include <QApplication>
+#include <QtPlugin>
 #include <QSslSocket>
-#include <QIcon>
 #include <QWebSettings>
 
-#include <exception>
 #include <stdio.h>
+
+#ifdef Q_OS_LINUX
+Q_IMPORT_PLUGIN(PhantomIntegrationPlugin);
+#endif
 
 static int inner_main(int argc, char** argv)
 {
+#ifdef Q_OS_LINUX
+    // override default Qt platform plugin
+    qputenv("QT_QPA_PLATFORM", "phantom");
+#endif
+
     QApplication app(argc, argv);
 
     app.setWindowIcon(QIcon(":/phantomjs-icon.png"));

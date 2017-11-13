@@ -34,9 +34,8 @@
 
 #include <QDir>
 #include <QFileInfo>
-#include <QtWebKitWidgets/QWebPage>
-#include <QtWebKitWidgets/QWebFrame>
-#include <QNetworkProxy>
+#include <QWebPage>
+#include <QWebFrame>
 
 #include "terminal.h"
 #include "qcommandline.h"
@@ -44,7 +43,6 @@
 #include "consts.h"
 
 #include <iostream>
-
 
 static const struct QCommandLineConfigEntry flags[] = {
     { QCommandLine::Option, '\0', "cookies-file", "Sets the file name to store the persistent cookies", QCommandLine::Optional },
@@ -177,7 +175,7 @@ void Config::loadJsonFile(const QString& filePath)
     // Add this object to the global scope
     webPage.mainFrame()->addToJavaScriptWindowObject("config", this);
     // Apply the JSON config settings to this very object
-    webPage.mainFrame()->evaluateJavaScript(configurator.arg(jsonConfig), QString());
+    webPage.mainFrame()->evaluateJavaScript(configurator.arg(jsonConfig));
 }
 
 QString Config::helpText() const

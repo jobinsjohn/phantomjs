@@ -1,4 +1,4 @@
-/*
+﻿/*
   This file is part of the PhantomJS project from Ofi Labs.
 
   Copyright (C) 2011 Ariya Hidayat <ariya.hidayat@gmail.com>
@@ -30,10 +30,7 @@
 
 #include "webpage.h"
 
-#include <QApplication>
 #include <QBuffer>
-#include <QContextMenuEvent>
-#include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
@@ -41,19 +38,14 @@
 #include <QImageWriter>
 #include <QKeyEvent>
 #include <QMapIterator>
-#include <QMouseEvent>
 #include <QNetworkAccessManager>
-#include <QNetworkCookie>
-#include <QNetworkProxy>
 #include <QNetworkRequest>
-#include <QPainter>
 #include <QScreen>
 #include <QUrl>
 #include <QUuid>
 #include <QWebElement>
-#include <QWebFrame>
-#include <QWebHistory>
 #include <QWebHistoryItem>
+#include <QWebFrame>
 #include <QWebInspector>
 #include <QWebPage>
 #include <math.h>
@@ -76,8 +68,8 @@
 #define BLANK_HTML                      "<html><head></head><body></body></html>"
 #define CALLBACKS_OBJECT_NAME           "_phantom"
 #define INPAGE_CALL_NAME                "window.callPhantom"
-#define CALLBACKS_OBJECT_INJECTION      INPAGE_CALL_NAME" = function() { return window."CALLBACKS_OBJECT_NAME".call.call(_phantom, Array.prototype.slice.call(arguments, 0)); };"
-#define CALLBACKS_OBJECT_PRESENT        "typeof(window."CALLBACKS_OBJECT_NAME") !== \"undefined\";"
+#define CALLBACKS_OBJECT_INJECTION      INPAGE_CALL_NAME" = function() { return window." CALLBACKS_OBJECT_NAME ".call.call(_phantom, Array.prototype.slice.call(arguments, 0)); };"
+#define CALLBACKS_OBJECT_PRESENT        "typeof(window." CALLBACKS_OBJECT_NAME ") !== \"undefined\";"
 
 #define STDOUT_FILENAME "/dev/stdout"
 #define STDERR_FILENAME "/dev/stderr"
@@ -172,14 +164,23 @@ protected:
 
     void javaScriptConsoleMessage(const QString& message, int lineNumber, const QString& sourceID)
     {
-        Q_UNUSED(lineNumber);
-        Q_UNUSED(sourceID);
-        emit m_webPage->javaScriptConsoleMessageSent(message);
+        emit m_webPage->javaScriptConsoleMessageSent(message, lineNumber, sourceID);
     }
 
     void javaScriptError(const QString& message, int lineNumber, const QString& sourceID, const QString& stack)
     {
         emit m_webPage->javaScriptErrorSent(message, lineNumber, sourceID, stack);
+    }
+
+    void consoleMessageReceived(MessageSource source, MessageLevel level, const QString& message, int lineNumber, const QString& sourceID)
+    {
+        Q_UNUSED(source);
+
+        if (level == ErrorMessageLevel) {
+            emit m_webPage->javaScriptErrorSent(message, lineNumber, sourceID, QString());
+        } else {
+            emit m_webPage->javaScriptConsoleMessageSent(message, lineNumber, sourceID);
+        }
     }
 
     QString userAgentForUrl(const QUrl& url) const
@@ -365,7 +366,6 @@ WebPage::WebPage(QObject* parent, const QUrl& baseUrl)
     // To grant universal access to a web page
     // attribute "WebSecurityEnabled" must be applied during the initializing
     // security context for Document instance. Setting up it later will not cause any effect
-    // see <qt\src\3rdparty\webkit\Source\WebCore\dom\Document.cpp:4468>
     QWebSettings* settings = m_customWebPage->settings();
     settings->setAttribute(QWebSettings::WebSecurityEnabled, phantomCfg->webSecurityEnabled());
 
@@ -395,7 +395,6 @@ WebPage::WebPage(QObject* parent, const QUrl& baseUrl)
     connect(m_customWebPage, SIGNAL(windowCloseRequested()), this, SLOT(close()), Qt::QueuedConnection);
     connect(m_customWebPage, SIGNAL(loadProgress(int)), this, SLOT(updateLoadingProgress(int)));
     connect(m_customWebPage, SIGNAL(repaintRequested(QRect)), this, SLOT(handleRepaintRequested(QRect)), Qt::QueuedConnection);
-
 
     // Start with transparent background.
     QPalette palette = m_customWebPage->palette();
@@ -634,7 +633,6 @@ void WebPage::applySettings(const QVariantMap& def)
     opt->setAttribute(QWebSettings::JavascriptEnabled, def[PAGE_SETTINGS_JS_ENABLED].toBool());
     opt->setAttribute(QWebSettings::XSSAuditingEnabled, def[PAGE_SETTINGS_XSS_AUDITING].toBool());
     opt->setAttribute(QWebSettings::LocalContentCanAccessRemoteUrls, def[PAGE_SETTINGS_LOCAL_ACCESS_REMOTE].toBool());
-    opt->setAttribute(QWebSettings::WebSecurityEnabled, def[PAGE_SETTINGS_WEB_SECURITY_ENABLED].toBool());
     opt->setAttribute(QWebSettings::JavascriptCanOpenWindows, def[PAGE_SETTINGS_JS_CAN_OPEN_WINDOWS].toBool());
     opt->setAttribute(QWebSettings::JavascriptCanCloseWindows, def[PAGE_SETTINGS_JS_CAN_CLOSE_WINDOWS].toBool());
 
@@ -763,14 +761,11 @@ QVariantMap WebPage::paperSize() const
 
 QVariant WebPage::evaluateJavaScript(const QString& code)
 {
-    QVariant evalResult;
-    QString function = "(" + code + ")()";
+	QString function = "(" + code + ")()";
 
     qDebug() << "WebPage - evaluateJavaScript" << function;
 
-    evalResult = m_currentFrame->evaluateJavaScript(
-                     function,                                   //< function evaluated
-                     QString("phantomjs://webpage.evaluate()")); //< reference source file
+    QVariant evalResult = m_currentFrame->evaluateJavaScript(function);
 
     qDebug() << "WebPage - evaluateJavaScript result" << evalResult;
 
@@ -942,7 +937,7 @@ void WebPage::openUrl(const QString& address, const QVariant& op, const QVariant
     }
 
     if (networkOp == QNetworkAccessManager::UnknownOperation) {
-        m_mainFrame->evaluateJavaScript("console.error('Unknown network operation: " + operation + "');", QString());
+        m_mainFrame->evaluateJavaScript("console.error('Unknown network operation: " + operation + "');");
         return;
     }
 
@@ -1071,7 +1066,7 @@ QString WebPage::renderBase64(const QByteArray& format)
 {
     QByteArray nformat = format.toLower();
 
-    if (format != "pdf" && !QImageWriter::supportedImageFormats().contains(nformat)) {
+    if (nformat != "pdf" && !QImageWriter::supportedImageFormats().contains(nformat)) {
         // Return an empty string in case an unsupported format was provided
         return "";
     }
@@ -1081,7 +1076,7 @@ QString WebPage::renderBase64(const QByteArray& format)
     QBuffer buffer(&bytes);
     buffer.open(QIODevice::WriteOnly);
 
-    if (format == "pdf") {
+    if (nformat == "pdf") {
         QPdfWriter pdfWriter(&buffer);
 
         if (!renderPdf(pdfWriter)) {
@@ -1350,7 +1345,7 @@ QString getHeaderFooter(const QVariantMap& map, const QString& key, QWebFrame* f
             }
         }
     }
-    frame->evaluateJavaScript("console.error('Bad header callback given, use phantom.callback);", QString());
+    frame->evaluateJavaScript("console.error('Bad header callback given, use phantom.callback);");
     return QString();
 }
 
@@ -1389,7 +1384,7 @@ bool WebPage::injectJs(const QString& jsFilePath)
 
 void WebPage::_appendScriptElement(const QString& scriptUrl)
 {
-    m_currentFrame->evaluateJavaScript(QString(JS_APPEND_SCRIPT_ELEMENT).arg(scriptUrl), scriptUrl);
+    m_currentFrame->evaluateJavaScript(QString(JS_APPEND_SCRIPT_ELEMENT).arg(scriptUrl));
 }
 
 QObject* WebPage::_getGenericCallback()
@@ -1797,6 +1792,16 @@ void WebPage::stopJavaScript()
 void WebPage::clearMemoryCache()
 {
     QWebSettings::clearMemoryCaches();
+}
+
+qreal WebPage::devicePixelRatio() const
+{
+    return m_customWebPage->devicePixelRatio();
+}
+
+void WebPage::setDevicePixelRatio(qreal devicePixelRatio)
+{
+    m_customWebPage->setDevicePixelRatio(devicePixelRatio);
 }
 
 #include "webpage.moc"

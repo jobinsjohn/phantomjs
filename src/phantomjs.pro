@@ -1,7 +1,3 @@
-if(!equals(QT_MAJOR_VERSION, 5)|!equals(QT_MINOR_VERSION, 6)) {
-    error("This program can only be compiled with Qt 5.6.x.")
-}
-
 TEMPLATE = app
 TARGET = phantomjs
 QT += network webkitwidgets
@@ -12,10 +8,15 @@ DESTDIR = ../bin
 RESOURCES = phantomjs.qrc \
     ghostdriver/ghostdriver.qrc
 
-win32 {
+CONFIG(static) {
+    WEB_INSPECTOR_RESOURCES_DIR = $$(WEB_INSPECTOR_RESOURCES_DIR)
+    isEmpty(WEB_INSPECTOR_RESOURCES_DIR): {
+        error("You must set the environment variable WEB_INSPECTOR_RESOURCES_DIR to generated Web Inspector resources")
+    }
+
     RESOURCES += \
-     qt/qtwebkit/Source/WebCore/inspector/front-end/WebKit.qrc \
-     qt/qtwebkit/Source/WebCore/generated/InspectorBackendCommands.qrc
+        $(WEB_INSPECTOR_RESOURCES_DIR)/WebInspector.qrc
+    message("Using Web Inspector resources from $(WEB_INSPECTOR_RESOURCES_DIR)")
 }
 
 HEADERS = \
@@ -88,10 +89,18 @@ win32-msvc* {
     # ingore warnings:
     # 4049 - locally defined symbol 'symbol' imported
     QMAKE_LFLAGS += /ignore:4049 /LARGEADDRESSAWARE
-    LIBS += -lCrypt32 -lzlib
     CONFIG(static) {
         DEFINES += STATIC_BUILD
     }
+}
+
+linux {
+    include($$PWD/qt-qpa-platform-plugin/phantom.pri)
+
+    CONFIG += c++11
+    QTPLUGIN.platforms = -
+    LIBS += -L$$PWD/qt-qpa-platform-plugin/plugins/platforms
+    LIBS += -lqphantom
 }
 
 openbsd* {

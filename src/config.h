@@ -31,8 +31,6 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
-#include <QString>
-#include <QStringList>
 #include <QNetworkProxy>
 #include <QVariant>
 
@@ -218,8 +216,6 @@ private:
     void resetToDefaults();
     void setProxyHost(const QString& value);
     void setProxyPort(const int value);
-    void setAuthUser(const QString& value);
-    void setAuthPass(const QString& value);
 
     QCommandLine* m_cmdLine;
     bool m_autoLoadImages;
