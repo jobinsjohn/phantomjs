@@ -11,14 +11,8 @@ function clean_pdf(data) {
     return data;
 }
 
-function render_test(format, option) {
-    var opt = option || {};
-    var scratch = "temp_render";
-    if (!opt.format) {
-        scratch += ".";
-        scratch += format;
-    }
-    var expect_content = renders.get(format, opt.quality || "");
+function render_test(format) {
+    var expect_content = btoa(renders.get(format, ""));
     var p = webpage.create();
 
     p.paperSize = { width: '300px', height: '300px', border: '0px' };
@@ -26,9 +20,7 @@ function render_test(format, option) {
     p.viewportSize = { width: 300, height: 300};
 
     p.open(TEST_HTTP_BASE + "render/", this.step_func_done(function (status) {
-        p.render(scratch, opt);
-        this.add_cleanup(function () { fs.remove(scratch); });
-        var content = fs.read(scratch, "b");
+        var content = p.renderBase64(format);
 
         // expected variation in PDF output
         if (format === "pdf") {
@@ -42,25 +34,17 @@ function render_test(format, option) {
 }
 
 [
-    ["PDF",                               "pdf", {}],
-    ["PDF (format option)",               "pdf", {format: "pdf"}],
-    ["PNG",                               "png", {}],
-    ["PNG (format option)",               "png", {format: "png"}],
-    ["JPEG",                              "jpg", {}],
-    ["JPEG (format option)",              "jpg", {format: "jpg"}],
-    ["JPEG (quality option)",             "jpg", {quality: 50}],
-    ["JPEG (format and quality options)", "jpg", {format: "jpg", quality: 50}],
+    "pdf",
+    "png",
+    "jpg",
 ]
-.forEach(function (arr) {
-    var label  = arr[0];
-    var format = arr[1];
-    var opt    = arr[2];
+.forEach(function (format) {
     var props  = {};
 
     // All tests except JPG fail.
     if (format !== "jpg")
         props.expected_fail = true;
 
-    async_test(function () { render_test.call(this, format, opt); },
-               label, props);
+    async_test(function () { render_test.call(this, format); },
+               format, props);
 });

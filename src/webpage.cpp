@@ -1062,8 +1062,29 @@ QString WebPage::renderBase64(const QByteArray& format)
 {
     QByteArray nformat = format.toLower();
 
+<<<<<<< HEAD
     // Check if the given format is supported
     if (QImageWriter::supportedImageFormats().contains(nformat)) {
+=======
+    if (nformat != "pdf" && !QImageWriter::supportedImageFormats().contains(nformat)) {
+        // Return an empty string in case an unsupported format was provided
+        return "";
+    }
+
+    // Prepare buffer for writing
+    QByteArray bytes;
+    QBuffer buffer(&bytes);
+    buffer.open(QIODevice::WriteOnly);
+
+    if (nformat == "pdf") {
+        QPdfWriter pdfWriter(&buffer);
+
+        if (!renderPdf(pdfWriter)) {
+            // Return an empty string if pdf render fails
+            return "";
+        }
+    } else {
+>>>>>>> ariya/master
         QImage rawPageRendering = renderImage();
 
         // Prepare buffer for writing

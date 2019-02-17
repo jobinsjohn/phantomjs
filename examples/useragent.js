@@ -7,8 +7,12 @@ page.open('http://www.httpuseragent.org', function (status) {
         console.log('Unable to access network');
     } else {
         var ua = page.evaluate(function () {
+<<<<<<< HEAD
 		return document.getElementById('qua').innerText;
 //		return document.getElementById('qua').textContent;
+=======
+            return document.getElementById('qua').value;
+>>>>>>> ariya/master
         });
         console.log(ua);
     }
